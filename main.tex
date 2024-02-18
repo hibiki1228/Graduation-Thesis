@@ -1,10 +1,592 @@
-\documentclass{article}
+
+\documentclass[11pt,a4j]{jreport}
+\renewcommand{\baselinestretch}{1.25}
+\usepackage{comment}
+\usepackage{float}
+\usepackage{color}
+\usepackage{multicol}
+\usepackage[dvipdfmx]{pict2e}
+\usepackage{wrapfig}
+\usepackage{graphicx}
+\usepackage{bm}
+\usepackage{url}
+\usepackage{underscore}
+\usepackage{colortbl}
+\usepackage{tabularx}
+\usepackage{fancyhdr}
+\usepackage{ulem}
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage[ipaex]{pxchfon}
+\usepackage{wrapfig}
+\usepackage{makeidx}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{subcaption} % 画像の配置を制御するために必要
+\usepackage{here}
+\usepackage{pxcjkcat}
 \usepackage[utf8]{inputenc}
-\title{Sample Project}
-\author{Masumi Morishige}
-\date{April 2021}
+
+
+\usepackage[top=30truemm,bottom=30truemm,left=25truemm,right=25truemm]{geometry}
+
 \begin{document}
-    \maketitle
-    \section{Introduction}
-    Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+\thispagestyle{empty}
+\begin{center}
+
+    \vspace{20mm}
+    {\Large\noindent 令和5年度 卒業論文}\\
+    \vspace{40mm}
+    {\huge\noindent\textbf{物体検出と平滑化を用いた\\サッカーボール追跡映像の視認性改善手法}}\\
+    \medskip
+    \vspace{\baselineskip}
+
+    \vspace{\baselineskip}
+    \vspace{\baselineskip}
+    \vspace{\baselineskip}
+    \vspace{\baselineskip}
+    \vspace{\baselineskip}
+    \vspace{\baselineskip}\vspace{\baselineskip}\vspace{\baselineskip}\vspace{\baselineskip}
+    {\Large\noindent
+        \\
+        \vspace{\baselineskip}
+        指導教員　大輪拓也　准教授    \\
+        \vspace{\baselineskip}
+        \vspace{\baselineskip}\vspace{\baselineskip}
+        電気電子工学科　電子システム工学コース \\
+        \vspace{\baselineskip}
+        201A3120　松沼　韻\\
+        \vspace{\baselineskip}\vspace{\baselineskip}
+        % \vspace{\baselineskip}
+        提出日　令和6年2月21日\\
+    }
+    \vspace{40mm}
+
+\end{center}
+
+\thispagestyle{empty}
+\clearpage
+
+%=====================================================================================
+\renewcommand{\abstractname}{概要}
+
+\begin{abstract}
+    サッカーの試合では試合分析や快適な観覧のためにボールを常に画角に捉えた映像を作成することがある。先行研究ではテンプレートマッチングという物体検出を用いた手法が多く使われている。しかし、誤追跡が発生し、ボールが処理範囲外に出た場合や人などで隠れた場合の処理には課題が残っている。\\
+    本研究では、物体検出と平滑化の組み合わせによってサッカーボールの自動追跡におけるトリミング映像の視認性改善を目的とする。物体検出はサッカーボールの画像を学習させたYoloを、平滑化には移動平均とSavitzky-Golayフィルタを用いている。提案手法では既存の物体検出だけの場合に比べて誤検出や未検出を擬似的に改善できた。その結果、誤検出や未検出による映像上の影響を軽減することに成功した。
+\end{abstract}
+
+%=====================================================================================
+
+% 目次の表示
+\tableofcontents
+
+%=====================================================================================
+\pagestyle{fancy}
+\lhead{\rightmark}
+\renewcommand{\chaptermark}[1]{\markboth{第\ \normalfont\thechapter\ 章~~#1}{}}
+%=====================================================================================
+
+\chapter{はじめに}
+スポーツにおける試合の撮影は重要なデータ収集手段であり、分析や選手評価、観客のエンターテイメント提供に大いに貢献している。様々なスポーツで試合の撮影技術は自動化されており、テニスのホークアイ\cite{ホークアイ}などが代表的な例である。本研究では数あるスポーツの中でもサッカーを対象とする。
+
+サッカーのプロの試合における撮影では、カメラマンがボールを追跡するようなカメラワークで撮影を行う。また、近年は物体検出などの技術を用いてボールを追跡しながらの自動撮影も増えている。\cite{auto1}しかし、サッカーのような多数の選手が一点に集中するような状況でのサッカーボールの正確な追跡は多くの課題があり、従来の物体検出技術だけでは、選手の密集や高速移動によるボールの誤検出、視界の遮蔽による未検出などの問題が発生しやすい。\cite{切り替えシステム}\cite{高解像度}これらの課題は、ボール追跡映像の精度を低下させ快適な試合映像だとは言い難くなる。現在のプロの試合であれば、高度の高い視点からの視界が明瞭な撮影や、複数または高級な機材でこれらの問題に対処できる。一方でアマチュアや子供の試合のようなローカルな試合ではプロと同じような環境を用意することは金銭的にも技術的にも難しく、同様の手法で問題へ対処することは容易でない。
+
+本研究は物体検出とボール追跡カメラワークの平滑化技術を組み合わせた新しいアプローチを提案し、ローカルな試合においてボール追跡映像の視認性改善を目的とする。ここにおける視認性とは、ボールが画面内に存在しかつ滑らかなカメラワークによるボール周辺の状況の認識のしやすさとする。また、物体検出はYoloと既存の手法でよく用いられるテンプレートマッチング、カメラワークの平滑化は移動平均とSavitzky-Golayフィルタを用いる。これらは特殊な道具を必要とせず、映像を撮影できる機材1つで動作可能である。既存手法で主に用いられるテンプレートマッチングと平滑化の組み合わせと提案手法のボール追跡映像を比較する。複数の動画に対して検証した結果、全ての動画において、Yoloと平滑化の組み合わせはテンプレートマッチングを平滑化させた場合より視認性を改善できたことがわかった。
+
+% 本論文の主な貢献事項は以下の通りである。
+%     \begin{itemize}
+%         % \item サッカー映像におけるボール追跡の誤検出・未検出の影響を減らしたこと。
+%         \item サッカーボール追跡映像の視認性が改善されたこと。
+%     \end{itemize}
+
+\chapter{関連研究}
+
+サッカーの自動撮影は物体検出の技術発展によって普及し始めている。物体検出にも様々な方法があり、スポーツにおける物体検出では画像処理による色抽出やフレーム毎の特徴量の変化\cite{携帯}、テンプレートマッチングの様な類似度を求める手法\cite{切り替えシステム}などがある。
+
+\noindent
+先行研究では、テンプレートマッチングによるボール探査の手法切り替え\cite{切り替えシステム}と、これに合わせたフリースローやゴールキックなど試合中のイベントの併用など様々な物体検出とそれを補助する組み合わせが研究されている。テンプレートマッチングは、テンプレート画像と呼ばれる正解画像を画面内のすべての位置にスライドさせ、最も類似度が高くなる箇所を特定することで物体検出を行う手法である。しかし、検出対象の画素が低い場合、類似度の精度が低くなる弱点がある。\cite{高解像度}そのため、サッカーのプロの試合では遠距離からの撮影を前提としていることから、映像上検出対象のボールが非常に小さく、テンプレートマッチングのみではボールの検出精度が低い。その結果、小さい物体の検出には高解像度のカメラを要すなど、テンプレートマッチング以外の手段が必要となる。また、サッカーの試合は一回で約90分程度であるため、試合中継のようなリアルタイムのボール追跡は処理速度が重要になる。しかし、高解像度のカメラではテンプレート画像を比較するための画素が多いため、処理速度により時間がかかってしまう。先行研究ではこれに対処するために、リアルタイム性を重視し処理速度の改善を行った。一方で、複雑な背景、様々な照明条件、迅速な動きや選手のなどによるボール追跡の誤検出や未検出が課題として残っている。ボールの誤検出・未検出があるとボールを追跡する様なカメラワークが激しい動きになり、快適な試合映像とは言い難い。
+
+% サッカー映像におけるボールの正確な追跡は、選手のパフォーマンス分析や戦術的な洞察の提供に不可欠である。しかし、複雑な背景、様々な照明条件、迅速な動きなどによりボールの誤検出や未検出が頻繁に発生し、これが大きな課題となっている。
+% 既存の研究では、深層学習に基づく物体検出アルゴリズムが顕著な成果を挙げているが、動的なスポーツ映像における応用では、特に小さなオブジェクトの検出において課題が残っている。Yoloなどの先進的な物体検出アルゴリズムは高い検出能力を持つ一方で、高速に移動するボールの追跡においては、フレーム間での連続性を保つことが難しく、結果として視認性が低下することがある。
+
+% こうした問題に対応するため、高解像度のカメラを用いたリアルタイム追跡手法やテンプレートマッチングによる物体検出のアルゴリズム改善などが先行研究で提案されている。高解像度カメラによるテンプレートマッチングの検出精度向上やボール以外の選手などを検出することでボールの位置を推測する方法があり、どちらもボール追跡の精度向上へ貢献している。しかし。誤追跡やボール未検出はかなず存在し、これらへの対処が課題となっている。
+
+そこで本研究では、この問題へ対処する手法を検証し、Yolo物体検出アルゴリズムと特定の平滑化フィルタの組み合わせが、テンプレートマッチングに基づく従来の手法よりも、ボール追跡映像の視認性を改善できることを示している。
+% これにより、サッカー映像におけるボールの誤検出と未検出を擬似的に無視でき、試合分析や選手のパフォーマンス評価においてより有益な情報を提供できるようになる。
+
+\chapter{準備}
+\section{テンプレートマッチング}
+テンプレートマッチングは，検出したい物体のテンプレートとなる画像をを事前に用意し，入力画像の中からテンプレート画像と最も類似した座標を求める手法である。\cite{画像処理}類似度の計算には、一般に相関係数や絶対値差の合計（SAD）、二乗差の合計（SSD）などが用いられる。ボール追跡手法では，式(3.1)により類似度を計算している．\cite{画像解析}
+
+\begin{equation}
+    R(x, y) = \frac{\sum_{x',y'} \left( T(x', y') - I(x + x', y + y') \right)^2}
+    {\sqrt{\sum_{x',y'} T(x', y')^2 \cdot \sum_{x',y'} I(x + x', y + y')^2}}
+\end{equation}
+
+$I$を$W$×$H$画素の入力画像，$T$を$w$×$h$画素のテンプレートとする。テンプレートマッチングでは，テンプレート画像を入力画像全体に対してスライドさせ，テンプレート画像と重なる領域と式 (1) で求めた結果を$R$に保存する。画面外で処理を行わないため、$R$は($W$−$w$+1)×($H$−$h$+1)画素の配列となり、$x$と$y$は入力画像の水平と垂直の画素位置を、$x$′と$y$′はテンプレート画像の水平と垂直の画素位置を示す。類似度計算に式(1)を用いた場合は，$R$の最小値がテンプレートと最も類似した位置となる．
+% テンプレートマッチングの実行には主にOpenCVライブラリが使用される。OpenCVは、オープンソースのコンピュータビジョンおよび機械学習ソフトウェアライブラリである。本研究で使用する具体的な関数はcv2.matchTemplate()であり、類似度の計測方法としてcv2.TM_CCOEFF_NORMEDを選択し。この方法は、テンプレートと各スキャン位置の間の相関係数を正規化したもので、値が高いほど一致度が高いことを示します。
+
+% 参考資料
+% OpenCV公式ドキュメント: https://opencv.org/
+% "OpenCV 2 Computer Vision Application Programming Cookbook" by Robert Laganière, Packt Publishing, 2012. (具体的なテンプレートマッチングの実装方法に関するガイド)
+\section{Yoloによる機械学習}
+Yolov5 (You Only Look Once version 5) は物体検出に広く使用される深層学習アルゴリズムの一つだ。\cite{yolo}このモデルは、画像内のオブジェクトをリアルタイムで検出し、そのクラスと位置を特定できる。これまで物体検出手法に用いられてきたDPM（Deformable Part Models）やR-CNN（Regions withConvolutional Neural Networks）といったモデルでは、物体の領域を推定したのちにクラスの分類を行うため、計算の負荷が大きく、処理時間が長いことが課題であった。DPMやR-CNNなどのモデルでは分断していた物体の領域推定とクラス分類が、1つのニューラルネットワークで完結するため物体の領域とクラスを同時に推定することが可能であり、負荷が少なく処理が高速である。
+Yolov5は畳み込みニューラルネットワーク(CNN)を基礎としており、画像を複数のグリッドに分割し、各グリッドセルでオブジェクトの存在確率とオブジェクトのバウンディングボックス（位置と大きさ）を予測する。このモデルは、様々なサイズのアンカーボックスを使用し、画像内のオブジェクトの形状とサイズに適応する。
+また、予測されたバウンディングボックスと実際のバウンディングボックスの差異を最小化するために、損失関数として主に「CIoU損失」を採用している。これはオブジェクトの位置、アスペクト比、重なり合う面積を考慮し、より正確なバウンディングボックスの調整を可能にする。モデルの重みを効率的に調整し高い検出精度を達成するために、モデルのトレーニングではAdamやSGD（確率的勾配降下法）などの最適化アルゴリズムが用いられる。
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{yoloFlow.png}
+    \caption{Yoloの物体検出フロー}
+    \label{fig:ラベル}
+\end{figure}
+
+\section{移動平均}
+移動平均は、フィルタで信号を滑らかにする平滑化の一種だ。時系列データの中で各点の一定期間内の平均を計算することで平滑化を行う。\cite{計測システム}平滑化は短期的な変動を滑らかにし、長期的な傾向を視覚化するのに有効である。本研究での応用として、サッカーボールの位置を追跡する際に生じる小さな揺れや誤差を平滑化し、式(3.2)の$n$(平均幅)を調整することでより安定したボールの軌道を得ることを目的としている。$n$フレーム間の移動平均は式(3.2)で計算される。
+\begin{equation}
+    MA_t = \frac{1}{n} \sum_{i=0}^{n-1} P_{t-i}
+\end{equation}
+
+ここで、$MA_t$は時刻$t$での移動平均、$P_{t−i}$は時刻$t$−$i$でのデータポイント、$n$は平滑化に用いる期間の長さである。
+
+\section{Savitzky-Golayフィルタ}
+Savitzky-Golayフィルタは、ノイズを含むデータに対して平滑化処理を行いながら、データの重要な特性を保持できる。\cite{SavitzkyOri}このフィルタは、局所的な多項式回帰分析を用いて、特定のデータ点の近くに存在する一連のデータポイントに適応させることで機能する。また、本研究において移動平均による平滑化に併せてこのフィルタにより補助的な平滑化を行う。
+
+Savitzky-Golayフィルタはデータセット内の各点$i$に対して、点$i$を中心とするサイズ$2m + 1$のウィンドウを考える。このウィンドウ内のデータポイントに対して、次数$n$の多項式
+\[
+    P(x) = a_0 + a_1x + a_2x^2 + \cdots + a_nx^n
+\]
+をフィットさせる。ここで、$x$はウィンドウ内の相対位置を表し、$a_0, a_1, \ldots, a_n$は多項式の係数である。多項式の係数は、最小二乗法を用いて決定される。これは、実際のデータポイントと多項式による近似値との差の二乗和を最小化する係数$a_0, a_1, \ldots, a_n$を見つける問題に帰着する。
+
+% 具体的に、最小二乗法の目的関数は
+% \[
+%     \sum_{j=-m}^{m} \left[ y_j - P(x_j) \right]^2
+% \]
+% となり、ここで$y_j$はウィンドウ内のデータポイントの値、$x_j$は中心点からの相対位置、$m$はウィンドウの半分のサイズを表す。この目的関数を最小化することで、多項式$P(x)$の係数を求め、データポイント$i$における平滑化値$P(0)$を計算する。
+
+% Savitzky-Golayフィルタの特徴は、この平滑化がデータの局所的な傾向を捉えることができる点にある。ウィンドウサイズ$2m + 1$と多項式の次数$n$の選択は、平滑化の程度とデータの特性を保存する能力のバランスを決定する。一般に、ウィンドウサイズを大きくすると平滑化効果が増し、多項式の次数を高くするとデータの局所的な変動により密接にフィットする。
+
+% この平滑化手法は、サッカーの試合映像からボールの動きを検出し、それを平滑化するために特に有効であり、Savitzky-Golayフィルタを適用することで、ボールの軌道を滑らかにしたものを元の座標に少し近づける効果があり、映像の質を向上させることが可能となる。
+
+% \section{本研究での言葉}
+%     ・視認性とは
+%     ・フレーム
+
+\chapter{提案手法}
+関連研究で述べたように、テンプレートマッチングなどの物体検出だけでのボールを追跡するカメラワークは、ボールの誤検出・未検出によって画面の様々な箇所に飛躍し急激な動きが多い。これらを改善する手法としてYoloと移動平均、Savitzky-Golayフィルタを用いたボール追跡動画のカメラワークの平滑化を提案する。以下にプログラムの流れを示す。\\
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.43\linewidth]{flow_v3.png}
+    \caption{フロー図}
+    \label{fig:ラベル}
+\end{figure}
+
+\subsection{Yoloの機械学習による検出}
+図4.1の①ではボールの検出をYoloで物体検出を行う。準備として、サッカーボールの形状を学習できるデータセットを用意した。図4.2にデータセットで用いた画像を例として挙げる。1つ目のデータセットはbatchを16、Epochを合計225となるよう複数回に分けて学習させた。それだけでは基本的な精度として不十分だったため、新しく別のデータセットを使用した。新規データセットではbatchをそのまま、Epochを合計200として複数回に分けて学習させた。これ以上の学習では過学習になる傾向が見られたため学習はここで終了した。
+\vspace{\baselineskip}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.7\linewidth]{dataset1.jpg}
+    \caption{学習用画像の例}
+    \label{fig:ラベル}
+\end{figure}
+
+\section{動画のトリミング}
+図4.1の①でボールを検出し、その座標を保存する。検出された物体は左上の座標$(x_1, y_1)$および右下の座標$(x_2, y_2)$、または中心の座標とサイズ（幅と高さ）が出力される。フレームごとの処理を以下に示す：\\
+
+\begin{enumerate}
+    \item 検出された物体の座標を基に、トリミング座標を配列に格納。
+    \item 未検出の場合は一つ前のフレームのトリミング座標で維持。
+    \item 座標の配列に基づいてフレームをトリミングし、出力動画に書き込む。\\
+\end{enumerate}
+
+トリミングする範囲は、$(x_1, y_1, \text{width}, \text{height})$を設定することで、トリミングされるフレームの左上の点と、トリミング範囲の幅および高さを定義する。物体検出によって得られた座標は、トリミングする範囲の中心に物体が来るように調整する。今回は、物体の中心座標からトリミング範囲の幅と高さの半分を引いた値をトリミング範囲として設定した。\\
+画面の端にトリミング範囲が達した場合、範囲が画面外に出ないように$(x_1, y_1)$の値をそれぞれ0または動画サイズの$x, y$座標の上限に置換する。結果調整されたトリミング範囲の座標を使用して、各フレームで指定した範囲をトリミングする。全てのフレームを一つに繋げ、動画として出力する。
+
+\chapter{実験}
+先行研究で用いられることが多かったテンプレートマッチングと平滑化の組み合わせを提案手法と比較する。検証に砂場背景・芝生背景のそれぞれ３本ずつ計６本の少年サッカーの試合映像を使用する。はじめに、移動平均で2つのパラメータを決定する。その後、各物体検出で適したパラメータを選び、提案手法とテンプレートマッチングの平滑化を勾配、平均二乗誤差、実際の動画から比較する。
+
+\section{実験1}
+
+各物体検出で移動平均のパラメータを変えつつ、カメラワークの滑らかさを表す座標遷移グラフの勾配、検出時と平滑化時の座標の平均二乗誤差を用いて同一動画におけるパラメータ同士の比較を行う。
+
+\subsection{テンプレートマッチングによる物体検出}
+テンプレートマッチングでの物体検出では以下のテンプレート画像を用いる。今研究でのテンプレート画像は検証用動画の一部のシーンを切り出し、複数枚使用する。
+
+\vspace{\baselineskip}
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}{0.3\textwidth}
+        \centering
+        \includegraphics[width=0.50\linewidth]{MAH00165_tmp1.png}
+        \caption{テンプレート画像1}
+    \end{subfigure}%
+    \begin{subfigure}{0.3\textwidth}
+        \centering
+        \includegraphics[width=0.45\linewidth]{MAH00165_tmp2.png}
+        \caption{テンプレート画像2}
+    \end{subfigure}%
+    \begin{subfigure}{0.3\textwidth}
+        \centering
+        \includegraphics[width=0.5\linewidth]{MAH00165_tmp3.png}
+        \caption{テンプレート画像3}
+    \end{subfigure}
+
+    \begin{subfigure}{0.25\textwidth}
+        \centering
+        \includegraphics[width=0.5\linewidth]{MAH00165_tmp4.png}
+        \caption{テンプレート画像4}
+    \end{subfigure}%
+    \begin{subfigure}{0.25\textwidth}
+        \centering
+        \includegraphics[width=0.5\linewidth]{MAH00165_tmp5.png}
+        \caption{テンプレート画像5}
+    \end{subfigure}%
+    \begin{subfigure}{0.25\textwidth}
+        \centering
+        \includegraphics[width=0.5\linewidth]{MAH00165_tmp6.png}
+        \caption{テンプレート画像6}
+    \end{subfigure}%
+    \begin{subfigure}{0.25\textwidth}
+        \centering
+        \includegraphics[width=0.5\linewidth]{MAH00165_tmp7.png}
+        \caption{テンプレート画像7}
+    \end{subfigure}%
+    \caption{使用したテンプレート画像}
+    \label{fig:images}
+\end{figure}
+
+\subsection{平滑化パラメータの組み合わせ}
+移動平均で変化させるパラメータは以下の通りである。
+
+\begin{itemize}
+    \item 平均幅：移動平均によって平均を取る一回の要素の幅。
+    \item 移動平均繰り返し回数：同一の検出座標グラフに対して行う移動平均の回数
+\end{itemize}
+
+パラメータの値は以下の通りである。それぞれの移動平均幅に対する各繰り返し回数の組み合わせで処理を行う。
+\begin{quote}
+    \begin{itemize}
+        \item 移動平均幅：5, 15, 20, 30
+        \item 移動平均繰り返し回数：1, 5, 10, 20, 50, 100
+    \end{itemize}
+\end{quote}
+
+以降は$[\text{移動平均幅}, \text{移動平均繰り返し回数}]$の形式でパラメータの表記を行う。
+
+\subsection{評価方法}
+平滑化によるボール追跡座標遷移の滑らかさと正確さを各パラメータで評価する。評価には以下の指標を用いる。
+
+\begin{itemize}
+    \item 勾配：平滑化後の座標遷移グラフの滑らかさ。隣接する要素間の変化率または傾きを示す。
+    \item 平均二乗誤差：物体検出による元座標と平滑化による新座標の動画全体での平均二乗誤差。(略：MSE)
+\end{itemize}
+平滑化の特徴として、勾配は値が小さいほどカメラワークは滑らかになるが、同時にMSEは大きくなり本来のボールの座標からトリミング範囲が離れていく。逆にMSEが小さく本来の座標に近いと、勾配が大きくなりあまり平滑化されていないことになる。よってこの実験で求めるパラメータは各動画で勾配とMSEの差が最も小さいパラメータとする。
+
+
+\section{実験2}
+実験1で選んだパラメータを用いて、各動画における提案手法とテンプレートマッチングの平滑化を比較する。
+
+\subsection{評価方法}
+勾配とMSEに加え、可視割合という指標を用いる。可視割合とは、動画全体の時間に対してボールが画面内に収まっている時間の割合とする。これは実際にボール追跡映像での追跡精度を確かめるための指標として扱い、各物体検出と動画で求める。
+
+\section{実験結果}
+\subsection{実験1}
+芝生の動画の1つにおける一部パラメータでの平滑化座標グラフを3つ例として図5.1-5.3に示す。青線は物体検出のみの座標、黄線は平滑化後の座標遷移を表す。
+
+\begin{figure}[H]
+    \centering
+    \fbox{
+        \includegraphics[width=0.8\linewidth]{s3mA15s5_2m30s_plot.png}
+    }
+    \caption{芝生1 [15, 5]}
+    \label{fig:ラベル}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \fbox{
+        \includegraphics[width=0.8\linewidth]{s3mA20s10_2m30s_plot.png}
+    }
+    \caption{芝生1 [15, 50]}
+    \label{fig:ラベル}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \fbox{
+        \includegraphics[width=0.8\linewidth]{s3mA30s50_2m30s_plot.png}
+    }
+    \caption{芝生1 [30, 50]}
+    \label{fig:ラベル}
+\end{figure}
+
+\vspace{\baselineskip}
+
+これらのグラフを元に、各パラメータで求めた評価指標をグラフにした。砂場背景・芝生背景の動画から一つずつ図5.4-5.7に示す。併せて以下の各図より、それぞれの動画で最も勾配とMSEの差が小さかったパラメータを表5.1に示す。
+
+\vspace{\baselineskip}
+\begin{figure}[H]
+    \centering
+    \fbox{
+        \includegraphics[width=0.8\linewidth]{sand1Param.png}
+    }
+    \caption{砂場1の指標遷移図}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \fbox{
+        \includegraphics[width=0.8\linewidth]{sand2Param.png}
+    }
+    \caption{砂場2の指標遷移図}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \fbox{
+        \includegraphics[width=0.8\linewidth]{sand3Param.png}
+    }
+    \caption{砂場3の指標遷移図}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \fbox{
+        \includegraphics[width=0.8\linewidth]{grass1Param.png}
+    }
+    \caption{芝生1の指標遷移図}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \fbox{
+        \includegraphics[width=0.8\linewidth]{grass2Param.png}
+    }
+    \caption{芝生2の指標遷移図}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \fbox{
+        \includegraphics[width=0.8\linewidth]{grass3Param.png}
+    }
+    \caption{芝生3の指標遷移図}
+\end{figure}
+
+\begin{table}[htbp]
+    \centering
+    \caption{選択パラメータ}
+    \label{tab:sandbox_grass}
+    \begin{tabular}{c|cccccc}
+                    & 砂場1      & 砂場2     & 砂場3     & 芝生1     & 芝生2     & 芝生3     \\ % 列の見出し
+        \hline
+        Yolo        & [20, 10] & [15,5]  & [30, 5] & [5, 50] & [20, 5] & [5, 50] \\
+        テンプレートマッチング & [5, 20]  & [30, 1] & [30, 1] & [5, 20] & [5, 20] & [5, 20] \\
+    \end{tabular}
+\end{table}
+
+
+\subsection{実験2}
+実験1で選んだパラメータで追跡映像を作成した結果、勾配と平均二乗誤差、可視割合は表5.2のようになった。\\
+
+% \vspace{\baselineskip}
+\begin{table}[htbp]
+    \centering
+    \label{tab:customTable}
+    \caption{評価表}
+    \begin{tabular}{|l|r|r|r|r|r|r|}
+        \hline
+        \multicolumn{1}{|c|}{} & \multicolumn{3}{c|}{Yolo} & \multicolumn{3}{c|}{テンプレートマッチング}                                                                                                                  \\ \hline
+        種類                     & \multicolumn{1}{|c|}{勾配}  & \multicolumn{1}{|c|}{MSE}        & \multicolumn{1}{|c|}{可視割合} & \multicolumn{1}{|c|}{勾配} & \multicolumn{1}{|c|}{MSE} & \multicolumn{1}{|c|}{可視割合} \\ \hline
+        砂場1                    & 16162.5                   & 17342.1                          & 67.7                       & 43205.0                  & 36470.0                   & 43.9                       \\
+        砂場2                    & 21495.0                   & 21753.7                          & 75.5                       & 32425.0                  & 34047.3                   & 46.5                       \\
+        砂場3                    & 14083.0                   & 14158.7                          & 72.3                       & 36287.5                  & 40723.2                   & 36.1                       \\
+        芝生1                    & 32907.5                   & 31292.5                          & 83.9                       & 55347.5                  & 47934.7                   & 43.2                       \\
+        芝生2                    & 25364.5                   & 25336.3                          & 80.6                       & 40817.0                  & 34782.1                   & 48.4                       \\
+        芝生3                    & 29602.0                   & 26217.2                          & 81.9                       & 48006.0                  & 40212.2                   & 46.5                       \\ \hline
+    \end{tabular}
+\end{table}
+% \begin{table}[htbp]
+%     \centering
+%     \label{tab:customTable}
+%     \caption{各動画の抽出パラメータにおける可視割合表}
+%     \begin{tabular}{|l|r|r|r|r|r|r|}
+%         \hline
+%         種類 & \multicolumn{1}{|c|}{砂場1} & \multicolumn{1}{|c|}{砂場2} & \multicolumn{1}{|c|}{砂場3} & \multicolumn{1}{|c|}{芝生1} & \multicolumn{1}{|c|}{芝生2} & \multicolumn{1}{|c|}{芝生3} \\ \hline
+%         Yolo & 67.7 & 75.5 & 72.3 & 83.9 & 80.6 & 81.9 \\
+%         テンプレートマッチング & 43.9 & 46.5 & 36.1 & 43.2 & 48.4 & 46.5 \\ \hline
+%     \end{tabular}
+% \end{table}
+
+% \subsubsection{砂場1}
+%     \begin{itemize}
+%         \item Yolo[20, 10]
+%         \begin{itemize}
+%             \item 勾配：16162.5
+%             \item MSE：17342.1
+%             \item ボール可視割合：67.7
+%         \end{itemize}
+
+%         \item テンプレートマッチング[5, 20]
+%         \begin{itemize}
+%             \item 勾配：43205.0
+%             \item MSE：36470.0
+%             \item ボール可視割合：43.9
+%         \end{itemize}
+%     \end{itemize}
+
+% \subsubsection{砂場2}
+%     \begin{itemize}
+%         \item Yolo[20s10, 5s100]
+%         \begin{itemize}
+%             \item 勾配：
+%             \item 平均二乗誤差：
+%             \item ボール可視割合：
+%         \end{itemize}
+
+%         \item テンプレートマッチング[]
+%         \begin{itemize}
+%             \item 勾配：
+%             \item 平均二乗誤差：
+%             \item ボール可視割合：
+%         \end{itemize}
+%     \end{itemize}
+
+% \subsubsection{砂場3}
+%     \begin{itemize}
+%         \item Yolo[20s10, 5s100]
+%         \begin{itemize}
+%             \item 勾配：
+%             \item 平均二乗誤差：
+%             \item ボール可視割合：
+%         \end{itemize}
+
+%         \item テンプレートマッチング[]
+%         \begin{itemize}
+%             \item 勾配：
+%             \item 平均二乗誤差：
+%             \item ボール可視割合：
+%         \end{itemize}
+%     \end{itemize}
+
+% \subsubsection{芝生1}
+%     \begin{itemize}
+%         \item Yolo[20s10, 5s100]
+%         \begin{itemize}
+%             \item 勾配：
+%             \item 平均二乗誤差：
+%             \item ボール可視割合：
+%         \end{itemize}
+
+%         \item テンプレートマッチング[]
+%         \begin{itemize}
+%             \item 勾配：
+%             \item 平均二乗誤差：
+%             \item ボール可視割合：
+%         \end{itemize}
+%     \end{itemize}
+
+% \subsubsection{芝生2}
+%     \begin{itemize}
+%         \item Yolo[20s10, 5s100]
+%         \begin{itemize}
+%             \item 勾配：
+%             \item 平均二乗誤差：
+%             \item ボール可視割合：
+%         \end{itemize}
+
+%         \item テンプレートマッチング[]
+%         \begin{itemize}
+%             \item 勾配：
+%             \item 平均二乗誤差：
+%             \item ボール可視割合：
+%         \end{itemize}
+%     \end{itemize}
+
+% \subsubsection{芝生3}
+%     \begin{itemize}
+%         \item Yolo[20s10, 5s100]
+%         \begin{itemize}
+%             \item 勾配：
+%             \item 平均二乗誤差：
+%             \item ボール可視割合：
+%         \end{itemize}
+
+%         \item テンプレートマッチング[]
+%         \begin{itemize}
+%             \item 勾配：
+%             \item 平均二乗誤差：
+%             \item ボール可視割合：
+%         \end{itemize}
+%     \end{itemize}
+
+\subsection{考察}
+
+図5.2-5.4からわかるように、検出したボールの座標が平滑化されており、図5.2に比べ図5.3は滑らかなグラフになっている。図5.4は図5.3に比べより滑らかなグラフになっている一方で、検出時の座標のグラフから大きく離れている様に見える。つまり、平均幅や繰り返し回数が増えるにつれて平滑化が進むが、それに伴って元のボール検出座標から離れる。また、図5.5-5.10の指標遷移図では、全ての動画においてYoloの勾配と平均二乗誤差はテンプレートマッチングの勾配と平均二乗誤差をおおよそ下回っていることがわかる。しかし、芝生の動画においてはYoloとテンプレートマッチングで勾配のグラフが砂場に比べて僅差であり、平均二乗誤差のみ砂場と同様に差がある。このことから芝生の動画に対してはどちらも同程度の平滑化ができるが、Yoloの方が元座標により近い平滑化ができたとわかる。
+
+表5.2を見ると全ての動画においてテンプレートマッチングよりYoloの方が可視割合が平均して約1.8倍高い。Yoloの勾配も平均二乗誤差もテンプレートマッチングのものに比べ約半分の値を取っていることから、Yoloの可視割合が勾配と平均二乗誤差に影響されていると考えられる。
+
+以上の結果から、Yoloの方が滑らかなカメラワークになっており、既存手法のテンプレートマッチングより検出時の座標に近い映像になっていることがわかる。加えて、可視割合も全ての動画においてYoloの方が上回っていることから視認性が改善されていると言える。
+
+\chapter{まとめ}
+
+本研究は、物体検出と平滑化の組み合わせによってサッカーボールの自動追跡におけるトリミング映像の視認性改善が目的である。実験から主な結果は以下の通りとなった。
+
+\begin{itemize}
+    \item 物体検出と平滑化の組み合わせのみでサッカー映像におけるボール追跡の誤検出・未検出の影響を減らした。
+    \item サッカーボール追跡映像の視認性が改善された。
+\end{itemize}
+
+\section{今後の課題}
+
+今回検証に用いた砂場と芝生の動画では
+
+\begin{itemize}
+    \item 今回の検証には砂場と芝生の動画などの大まかに背景を限定してを用いたが、ボールの種類や撮影位置などは無視しており、これらがボール検出にどれだけ影響するかは確かめられていない。さらに動画に含まれる状況を細かく分類し、検出や平滑化の変化を調べることでそれぞれの環境に適した平滑化のパラメータが得られる可能性がある。
+    \item 処理に時間を要するため、各動画2分30秒ずつのものを使用しており、１試合分の前後半45分ずつでの検証ができていない。先行研究で処理時間についての言及が多いことから、本研究では処理時間は考慮していないが、この研究をサービス化する場合は必ず考慮すべき問題となる。今後、先行研究と本研究を組み合わせて処理時間の短縮も試みたい。
+\end{itemize}
+
+%=====================================================================================
+\chapter*{謝辞} %章を付けずにタイトル表示
+\addcontentsline{toc}{chapter}{謝辞} %章立てせずに目次に追加するおまじない
+本論文を作成するにあたり、指導教員として多大なご指導を賜った大輪先生とみなさまに感謝の意を表します．
+
+%=====================================================================================
+
+% \addcontentsline{toc}{chapter}{参考文献} %章立てせずに目次に追加するおまじない
+\renewcommand{\bibname}{参考文献} %これがないと，タイトルが「関連図書」になってしまう
+% \bibliography{bibtexファイル名} %bibtexファイルの読み込み
+% \bibliographystyle{junsrt} %本文に\cite{}を入れることで，参考文献表示\\
+
+% % \chapter*{参考文献}
+% % \addcontentsline{toc}{chapter}{参考文献}
+% \bibitem{ホークアイ}
+% [1]N. Owens, C. Harris and C. Stennett, “Hawk-eye tennis system”, International Conference on Visual Information Engineering VIE 2003, pp.182-185, 2003
+% \bibitem{ソリティア}
+% [2]新谷　敏朗,ソリティアの成功率に関する考察,福山大学工学部紀要第30巻pp.219-226,(2006)
+% \bibitem{フリーセル}
+% [3]神保　秀司,フリーセルの解の存在判定アルゴリズムの設計,情報処理学会,第81回全国大会講演論文集,2019巻,1号,pp.97-98,(2019)
+% \bibitem{詰将棋}
+% [4]笠田　洋和,山田　雅之,松波　功二,世木　博久,伊藤　英則,詰将棋におけるゲーム木の並列探索とその評価,情報処理学会論文誌,36巻,11号,pp.2531-2539,(1995)
+% \bibitem{オセロ}
+% [5]鈴木　康太朗,4×4オセロ全手解析,http://www.net.c.dendai.ac.jp/~ksuzuki/
+
+\begin{thebibliography}{99}
+    \bibitem{auto1} 窪田進太郎，有木康雄，塚田清志，” 嗜好分類に基づく個人適応型サッカー映像の自動生成技術”, 電子情報通信学会技術研究報告，PRMU2005-115,pp. 7–12,2005.
+    \bibitem{ホークアイ} N. Owens, C. Harris and C. Stennett, “Hawk-eye tennis system”, International Conference on Visual Information Engineering VIE 2003, pp.182-185, 2003
+    \bibitem{予測}  Z. Deng, Y.Hou, X. Cheng and T. Ikenaga, “Multi-Peak Estimation for Real-Time 3D Ping-Pong Ball Tracking with Double-Queue Based GPU Acceleration”, IEICE Trans. on Information and Systems,vol.E101, no.12, pp.1251-1259, 2018.
+    \bibitem{画像解析} 高木幹雄, 下田陽久, 新編画像解析ハンドブック, 東京大学出版会, 2004年9月
+    \bibitem{画像処理} 田村秀行, 斎藤英雄, コンピュータ画像処理(改訂2版), オーム社, 2022年2月
+    \bibitem{yolo} Redmon, J., Divvala, S., Girshick, R., and Farhadi, A.：You Only Look Once: Unified, Real-Time Object Detection, Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pp.779-788, 2016
+    \bibitem{計測システム} 西原主計, 山藤和男, 計測システム工学の基礎(第2版), 森北出版, 2005年2月
+    \bibitem{切り替えシステム} 矢野 一樹, 滝口 哲也, 有木 康雄, 探索手法の切り替えを用いたサッカー映像におけるボール追跡システム, 画像の認識・理解シンポジウム (MIRU2007), 2007年7月
+    \bibitem{高解像度} 鶴崎 裕貴, 渡邊 良亮, 野中 敬介, 内藤 整, 高解像スポーツ映像におけるリアルタイムボール追跡手法の一検討, 情報処理学会研究報告, 2019年9月
+    \bibitem{携帯} 沼田 誠, 妹尾 宏, 鹿喰 善明, 携帯端末向け放送映像トリミング手法における視認性の改善効果について, FIT2009（第8回情報科学技術フォーラム）（第3分冊）
+    \bibitem{SavitzkyOri} W. Eikyu, K. Sekiguchi and K. Nonaka. Nonlinear control for the extended model of the loadsuspended UAV based on the experiments. In Third IFAC Conference on Modelling, Identification and Control of Nonlinear Systems (MICNON2021), pp.106–111, 2021.
+\end{thebibliography}
+
+
+
 \end{document}
