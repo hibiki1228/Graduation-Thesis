@@ -1,0 +1,85 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage{amsmath}
+\usepackage{amsmath, amssymb}
+\usepackage{type1cm}
+\usepackage[top=15truemm, right=30truemm, left=30truemm, bottom=20truemm]{geometry}
+% \usepackage[margin=30truemm]{geometry}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage[dvipdfmx]{pict2e}
+\usepackage[dvips]{graphicx}
+\usepackage{wrapfig}
+\pagestyle{empty}
+\usepackage{array} % 垂直中央揃えに必要
+\captionsetup[table]{skip=2pt} % キャプションと表の間隔を調整
+
+
+\begin{document}
+\begin{center}
+  \Large{内容梗概}
+
+  \Large{題目：物体検出と平滑化を用いたサッカーボール追跡映像の視認性改善手法}
+
+  \large{指導教員：大輪拓也 准教授　201A3120 松沼韻}
+\end{center}
+
+\vskip \baselineskip
+% \vskip \baselineskip
+
+\noindent
+\large{【背景】}
+
+\normalsize
+\noindent
+少年サッカーのようなローカルな試合を自動で編集する場合、テンプレートマッチング(TM)という既存のボール追跡手法では、ボールの誤検出や未検出による急激なフレーム移動が視認性を低下させる問題となっている。
+\vskip \baselineskip
+\noindent
+\large{【提案手法】}
+
+\normalsize
+\noindent
+深層学習手法の一つであるYoloを用いて動画内のボールを検出し、移動平均とSavitzky-Golayフィルタで動画内におけるボールの座標遷移グラフの平滑化を行う。本手法は検出座標の平滑化によってボールの誤検出や未検出で発生する座標の異常値を無視することで、映像の急激なカメラワークの動きを防ぎ、ボール追跡映像に対する視認性の改善が期待される。
+
+\vskip \baselineskip
+
+\noindent
+\large{【実験内容】}
+
+\normalsize
+\noindent
+TMとYoloに平滑化を適用し、ボール追跡映像を比較する。適切な平滑化パラメータを設定後、それぞれのパラメータにおける改善度合いについて評価を行う。砂場・芝生での少年サッカーの試合映像２種類を用いて、2つの実験を行う。
+\begin{enumerate}
+  \item 移動平均の区間数と移動平均繰り返し回数を決定する。繰り返し回数とは同一グラフに移動平均を実行する回数である。全てのパラメータで平滑化後座標の勾配、検出時と平滑化後の座標の平均二乗誤差(MSE)から、各物体検出・動画のにおける両者の差が最も小さいパラメータを求めるパラメータとする。
+  \item ボール追跡映像における画面内にボールが存在している時間(可視割合)を求め、前述の実験で得た勾配とMSEから各動画の最適なパラメータを用いてYoloとTMの平滑化を比較する。
+\end{enumerate}
+
+\noindent
+\large{【実験結果】}
+
+\normalsize
+\noindent
+実験1の結果、Yoloでは\{区間数, 繰り返し回数\}=\{20, 5\}、TMでは\{30, 1\}が選ばれた。
+
+\noindent
+実験２の結果は以下の通りである。この表からYoloの方が勾配とMSEが小さく、可視割合も大きいことがわかる。
+\begin{table}[htbp]
+  \centering
+  \label{tab:customTable}
+  \caption{評価表}
+  \begin{tabular}{|l|r|r|r|r|r|r|}
+    \hline
+    \multicolumn{1}{|c|}{} & \multicolumn{3}{c|}{Yolo} & \multicolumn{3}{c|}{TM}                                                                                                                            \\ \hline
+    種類                     & \multicolumn{1}{|c|}{勾配}  & \multicolumn{1}{|c|}{MSE} & \multicolumn{1}{|c|}{可視割合[\%]} & \multicolumn{1}{|c|}{勾配} & \multicolumn{1}{|c|}{MSE} & \multicolumn{1}{|c|}{可視割合[\%]} \\ \hline
+    % 種類 & 勾配 & MSE & 可視割合 & 勾配 & MSE & 可視割合 \\ \hline
+    砂場                     & 17246.8                   & 17751.5                   & 71.8                           & 37305.8                  & 37080.2                   & 42.2                           \\
+    芝生                     & 29291.3                   & 27615.4                   & 82.2                           & 48056.8                  & 40976.3                   & 46.0                           \\ \hline
+  \end{tabular}
+\end{table}
+
+\noindent
+以上のことから、提案手法は既存手法より滑らかかつボールが画面内に存在する割合が高いため、サッカーボール追跡映像の視認性が改善できたと言える。
+% \begin{itemize}
+%     \item 物体検出と平滑化の組み合わせのみでボール追跡の誤検出・未検出に対応できた。
+%     \item 。
+% \end{itemize}
+\end{document}
